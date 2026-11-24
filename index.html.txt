@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Une petite attention</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,500&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap">
+  <style>
+    :root {
+      --bg-top: #0B192C;
+      --bg-bottom: #1E3E62;
+      --env-body: #274C77;
+      --env-flap: #1D3557;
+      --env-side: #204066;
+      --env-shadow: rgba(5, 12, 24, 0.55);
+      --card-bg: #F4F8FB;
+      --card-border: #D0E1F9;
+      --ink: #102A43;
+      --muted: #486581;
+      --accent: #3B82F6;
+      --gold: #E2B857;
+      --font-serif: "Cormorant Garamond", Georgia, serif;
+      --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 25%, var(--bg-bottom), var(--bg-top));
+      font-family: var(--font-sans);
+      color: #F0F4F8;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Particules douces en arrière-plan */
+    .particles {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 1;
+    }
+    .particle {
+      position: absolute;
+      background: radial-gradient(circle, rgba(186, 230, 253, 0.45) 0%, rgba(186, 230, 253, 0) 70%);
+      border-radius: 50%;
+      animation: floatUp linear infinite;
+    }
+    @keyframes floatUp {
+      0% { transform: translateY(105vh) scale(0.8); opacity: 0; }
+      20% { opacity: 0.7; }
+      80% { opacity: 0.5; }
+      100% { transform: translateY(-10vh) scale(1.2); opacity: 0; }
+    }
+
+    .scene {
+      position: relative;
+      z-index: 2;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      perspective: 1200px;
+    }
+
+    .hint {
+      position: absolute;
+      bottom: max(36px, env(safe-area-inset-bottom, 24px));
+      font-size: 0.9rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #9FB3C8;
+      animation: pulse 2.2s ease-in-out infinite;
+      transition: opacity 0.4s ease;
+    }
+    .scene.opened .hint {
+      opacity: 0;
+      pointer-events: none;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.45; transform: translateY(0); }
+      50% { opacity: 1; transform: translateY(-3px); }
+    }
+
+    /* Enveloppe */
+    .envelope-wrapper {
+      position: relative;
+      width: min(340px, 88vw);
+      height: 220px;
+      cursor: pointer;
+      transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .envelope-wrapper:hover:not(.is-open) {
+      transform: translateY(-4px);
+    }
+    .scene.opened .envelope-wrapper {
+      transform: translateY(155px);
+      cursor: default;
+    }
+
+    .envelope-back {
+      position: absolute;
+      inset: 0;
+      background: var(--env-flap);
+      border-radius: 12px;
+      box-shadow: 0 24px 50px var(--env-shadow);
+    }
+
+    /* Carte intérieure */
+    .letter-card {
+      position: absolute;
+      left: 50%;
+      bottom: 12px;
+      transform: translateX(-50%) translateY(0);
+      width: 90%;
+      height: 196px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(11, 25, 44, 0.25);
+      z-index: 2;
+      transition: transform 0.95s cubic-bezier(0.22, 1, 0.36, 1) 0.35s,
+                  height 0.95s cubic-bezier(0.22, 1, 0.36, 1) 0.35s,
+                  width 0.95s cubic-bezier(0.22, 1, 0.36, 1) 0.35s,
+                  box-shadow 0.95s ease 0.35s;
+      overflow: hidden;
+    }
+
+    .scene.opened .letter-card {
+      transform: translateX(-50%) translateY(-195px);
+      width: min(370px, 92vw);
+      height: 430px;
+      box-shadow: 0 25px 60px rgba(4, 10, 22, 0.65);
+      z-index: 6;
+    }
+
+    /* Rabats avant de l'enveloppe */
+    .envelope-front {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .envelope-front::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--env-side);
+      clip-path: polygon(0 0, 52% 54%, 0 100%);
+    }
+    .envelope-front::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--env-body);
+      clip-path: polygon(100% 0, 48% 54%, 100% 100%);
+    }
+    .envelope-bottom {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      background: linear-gradient(180deg, #2B5482 0%, #1E3E62 100%);
+      clip-path: polygon(0 100%, 50% 48%, 100% 100%);
+      border-radius: 0 0 12px 12px;
+      pointer-events: none;
+    }
+
+    /* Rabat supérieur animé */
+    .envelope-flap {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 130px;
+      background: linear-gradient(180deg, #1B365D 0%, #274C77 100%);
+      clip-path: polygon(0 0, 100% 0, 50% 92%);
+      transform-origin: top center;
+      transition: transform 0.65s cubic-bezier(0.4, 0, 0.2, 1), z-index 0.1s linear 0.3s;
+      z-index: 5;
+      border-radius: 12px 12px 0 0;
+    }
+    .scene.opened .envelope-flap {
+      transform: rotateX(180deg);
+      z-index: 1;
+    }
+
+    /* Cachet */
+    .seal {
+      position: absolute;
+      top: 96px;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #F3D078, #C59B27);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.6);
+      z-index: 6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    .seal svg {
+      width: 22px;
+      height: 22px;
+      fill: #5C4308;
+    }
+    .scene.opened .seal {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.6);
+      pointer-events: none;
+    }
+
+    /* Contenu de la carte */
+    .bouquet {
+      width: 195px;
+      height: 215px;
+      opacity: 0;
+      transform: scale(0.85) translateY(10px);
+      transition: opacity 0.8s ease 0.75s, transform 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.75s;
+    }
+    .scene.opened .bouquet {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+
+    .message-box {
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.8s ease 0.95s, transform 0.8s ease 0.95s;
+      padding-bottom: 6px;
+    }
+    .scene.opened .message-box {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .eyebrow {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    .title {
+      font-family: var(--font-serif);
+      font-size: 1.95rem;
+      font-weight: 600;
+      line-height: 1.15;
+      color: var(--ink);
+    }
+    .divider {
+      width: 40px;
+      height: 2px;
+      background: #93C5FD;
+      margin: 12px auto 0;
+      border-radius: 2px;
+    }
+
+    @media (max-height: 640px) {
+      .scene.opened .envelope-wrapper { transform: translateY(130px); }
+      .scene.opened .letter-card { transform: translateX(-50%) translateY(-165px); height: 390px; }
+      .bouquet { width: 165px; height: 185px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="particles" id="particles" aria-hidden="true"></div>
+
+  <main class="scene" id="scene">
+    <div class="envelope-wrapper" id="envelope" role="button" tabindex="0" aria-label="Ouvrir la lettre">
+      <div class="envelope-back"></div>
+
+      <article class="letter-card">
+        <!-- Bouquet de lys en SVG -->
+        <svg class="bouquet" viewBox="0 0 240 260" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Bouquet de lys bleus et blancs">
+          <defs>
+            <linearGradient id="petalWhite" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#FFFFFF"/>
+              <stop offset="70%" stop-color="#E0F2FE"/>
+              <stop offset="100%" stop-color="#BAE6FD"/>
+            </linearGradient>
+            <linearGradient id="petalBlue" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#DBEAFE"/>
+              <stop offset="55%" stop-color="#93C5FD"/>
+              <stop offset="100%" stop-color="#3B82F6"/>
+            </linearGradient>
+            <linearGradient id="stemGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#3B82F6"/>
+              <stop offset="100%" stop-color="#1E3A8A"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Tiges et feuillage bleu-vert profond -->
+          <path d="M120 115 C118 165, 118 205, 120 242" stroke="url(#stemGrad)" stroke-width="3.5" stroke-linecap="round"/>
+          <path d="M78 135 C92 175, 108 205, 120 242" stroke="url(#stemGrad)" stroke-width="3" stroke-linecap="round"/>
+          <path d="M162 135 C148 175, 132 205, 120 242" stroke="url(#stemGrad)" stroke-width="3" stroke-linecap="round"/>
+
+          <!-- Feuilles élancées -->
+          <path d="M118 190 C90 175, 65 182, 55 198 C75 198, 98 196, 118 195 Z" fill="#1D4ED8" opacity="0.75"/>
+          <path d="M122 185 C150 170, 175 178, 186 194 C166 194, 142 192, 122 190 Z" fill="#1E40AF" opacity="0.8"/>
+          <path d="M117 210 C95 202, 75 212, 68 225 C86 222, 102 218, 118 214 Z" fill="#2563EB" opacity="0.65"/>
+          <path d="M123 208 C145 200, 165 210, 172 223 C154 220, 138 216, 122 212 Z" fill="#2563EB" opacity="0.65"/>
+
+          <!-- Lys Gauche (Bleu glacier) -->
+          <g transform="translate(74, 126) rotate(-24)">
+            <path d="M0 0 C-18 -22, -16 -52, 0 -64 C16 -52, 18 -22, 0 0 Z" fill="url(#petalBlue)"/>
+            <path d="M0 0 C-32 -12, -48 -36, -42 -52 C-24 -48, -10 -24, 0 0 Z" fill="url(#petalWhite)"/>
+            <path d="M0 0 C32 -12, 48 -36, 42 -52 C24 -48, 10 -24, 0 0 Z" fill="url(#petalWhite)"/>
+            <path d="M0 0 C-28 8, -42 26, -32 40 C-18 32, -8 14, 0 0 Z" fill="url(#petalBlue)"/>
+            <path d="M0 0 C28 8, 42 26, 32 40 C18 32, 8 14, 0 0 Z" fill="url(#petalBlue)"/>
+            <!-- Étamines -->
+            <path d="M0 -4 Q-6 -22 -10 -30 M0 -4 Q0 -25 0 -34 M0 -4 Q6 -22 10 -30" stroke="#1E3A8A" stroke-width="1.3" stroke-linecap="round"/>
+            <circle cx="-10" cy="-31" r="2.2" fill="#FBBF24"/>
+            <circle cx="0" cy="-35" r="2.2" fill="#FBBF24"/>
+            <circle cx="10" cy="-31" r="2.2" fill="#FBBF24"/>
+          </g>
+
+          <!-- Lys Droit (Bleu glacier) -->
+          <g transform="translate(166, 126) rotate(24)">
+            <path d="M0 0 C-18 -22, -16 -52, 0 -64 C16 -52, 18 -22, 0 0 Z" fill="url(#petalBlue)"/>
+            <path d="M0 0 C-32 -12, -48 -36, -42 -52 C-24 -48, -10 -24, 0 0 Z" fill="url(#petalWhite)"/>
+            <path d="M0 0 C32 -12, 48 -36, 42 -52 C24 -48, 10 -24, 0 0 Z" fill="url(#petalWhite)"/>
+            <path d="M0 0 C-28 8, -42 26, -32 40 C-18 32, -8 14, 0 0 Z" fill="url(#petalBlue)"/>
+            <path d="M0 0 C28 8, 42 26, 32 40 C18 32, 8 14, 0 0 Z" fill="url(#petalBlue)"/>
+            <!-- Étamines -->
+            <path d="M0 -4 Q-6 -22 -10 -30 M0 -4 Q0 -25 0 -34 M0 -4 Q6 -22 10 -30" stroke="#1E3A8A" stroke-width="1.3" stroke-linecap="round"/>
+            <circle cx="-10" cy="-31" r="2.2" fill="#FBBF24"/>
+            <circle cx="0" cy="-35" r="2.2" fill="#FBBF24"/>
+            <circle cx="10" cy="-31" r="2.2" fill="#FBBF24"/>
+          </g>
+
+          <!-- Lys Central (Grand lys blanc et reflets azur) -->
+          <g transform="translate(120, 96)">
+            <path d="M0 0 C-22 -28, -20 -64, 0 -78 C20 -64, 22 -28, 0 0 Z" fill="url(#petalWhite)" stroke="#BAE6FD" stroke-width="1"/>
+            <path d="M0 0 C-40 -14, -58 -44, -50 -62 C-28 -56, -12 -28, 0 0 Z" fill="url(#petalBlue)"/>
+            <path d="M0 0 C40 -14, 58 -44, 50 -62 C28 -56, 12 -28, 0 0 Z" fill="url(#petalBlue)"/>
+            <path d="M0 0 C-36 10, -52 32, -40 48 C-22 38, -10 18, 0 0 Z" fill="url(#petalWhite)" stroke="#BAE6FD" stroke-width="1"/>
+            <path d="M0 0 C36 10, 52 32, 40 48 C22 38, 10 18, 0 0 Z" fill="url(#petalWhite)" stroke="#BAE6FD" stroke-width="1"/>
+            <path d="M0 0 C-14 22, -12 46, 0 56 C12 46, 14 22, 0 0 Z" fill="url(#petalBlue)"/>
+            <!-- Nervures délicates -->
+            <path d="M0 -6 L0 -54 M0 -4 L-34 -42 M0 -4 L34 -42" stroke="#60A5FA" stroke-width="1" stroke-linecap="round" opacity="0.6"/>
+            <!-- Étamines dorées -->
+            <path d="M0 -4 Q-9 -26 -14 -36 M0 -4 Q-3 -30 -4 -41 M0 -4 Q4 -30 5 -41 M0 -4 Q10 -26 15 -36" stroke="#1E40AF" stroke-width="1.5" stroke-linecap="round"/>
+            <ellipse cx="-14" cy="-37" rx="3" ry="1.8" transform="rotate(-25 -14 -37)" fill="#F59E0B"/>
+            <ellipse cx="-4" cy="-42" rx="3" ry="1.8" fill="#F59E0B"/>
+            <ellipse cx="5" cy="-42" rx="3" ry="1.8" fill="#F59E0B"/>
+            <ellipse cx="15" cy="-37" rx="3" ry="1.8" transform="rotate(25 15 -37)" fill="#F59E0B"/>
+          </g>
+
+          <!-- Ruban bleu nuit noué autour des tiges -->
+          <path d="M107 212 Q120 218 133 212" stroke="#1E3A8A" stroke-width="6" stroke-linecap="round"/>
+          <path d="M118 214 C104 204, 96 218, 114 217" stroke="#2563EB" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+          <path d="M122 214 C136 204, 144 218, 126 217" stroke="#2563EB" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+          <path d="M117 216 L109 235 M123 216 L131 235" stroke="#2563EB" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+
+        <div class="message-box">
+          <div class="eyebrow">Pour toi</div>
+          <h1 class="title">Bon courage pour ta journée</h1>
+          <div class="divider"></div>
+        </div>
+      </article>
+
+      <div class="envelope-front"></div>
+      <div class="envelope-bottom"></div>
+      <div class="envelope-flap"></div>
+
+      <div class="seal" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+        </svg>
+      </div>
+    </div>
+
+    <p class="hint">Touche l'enveloppe pour l'ouvrir</p>
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+      var scene = document.getElementById('scene');
+      var envelope = document.getElementById('envelope');
+      var particlesContainer = document.getElementById('particles');
+
+      // Génération des particules lumineuses bleutées
+      for (var i = 0; i < 18; i++) {
+        var p = document.createElement('div');
+        p.className = 'particle';
+        var size = 6 + Math.random() * 14;
+        p.style.width = size + 'px';
+        p.style.height = size + 'px';
+        p.style.left = (Math.random() * 100) + 'vw';
+        p.style.animationDuration = (8 + Math.random() * 10) + 's';
+        p.style.animationDelay = (-Math.random() * 12) + 's';
+        particlesContainer.appendChild(p);
+      }
+
+      function openLetter() {
+        if (!scene.classList.contains('opened')) {
+          scene.classList.add('opened');
+          envelope.classList.add('is-open');
+        }
+      }
+
+      envelope.addEventListener('click', openLetter);
+      envelope.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openLetter();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
